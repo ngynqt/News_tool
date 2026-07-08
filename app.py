@@ -450,8 +450,8 @@ HTML_TEMPLATE = """
 <body>
     <div class="container">
         <header>
-            <h1>Cafef AI Facebook Poster</h1>
-            <p class="subtitle">Cào bài báo nhanh chóng, tự động tóm tắt thành bài đăng Facebook bằng Gemini AI</p>
+            <h1>Web Tóm Tắt Báo ( TRUSTFIN )</h1>
+            <p class="subtitle">Nhập link bài báo và copy tóm tắt từ AI </p>
         </header>
 
         <!-- API Config Accordion -->
@@ -469,12 +469,24 @@ HTML_TEMPLATE = """
                 <div class="form-group" style="margin-bottom: 1rem;">
                     <label for="model-select">Mô hình Gemini (Model)</label>
                     <select id="model-select" onchange="handleModelChange()" style="width: 100%;">
-                        <option value="gemini-2.5-flash">gemini-2.5-flash (Nhanh, Tối ưu & Khuyên dùng)</option>
-                        <option value="gemini-1.5-flash">gemini-1.5-flash (Bản cũ Flash)</option>
-                        <option value="gemini-1.5-pro">gemini-1.5-pro (Bản cũ Pro)</option>
-                        <option value="gemini-2.0-flash">gemini-2.0-flash (Bản 2.0 Flash)</option>
-                        <option value="gemini-2.5-pro">gemini-2.5-pro (Thế hệ mới Pro)</option>
-                        <option value="custom">Tùy chỉnh model khác...</option>
+                        <optgroup label="⭐ Mới nhất &mdash; Gemini 3.x">
+                            <option value="gemini-3.5-flash">Gemini 3.5 Flash (Mới nhất &amp; Nhanh)</option>
+                            <option value="gemini-3.1-flash-lite">Gemini 3.1 Flash Lite (Nhẹ, tiết kiệm quota)</option>
+                            <option value="gemini-3.1-pro-preview">Gemini 3.1 Pro (Chất lượng cao)</option>
+                            <option value="gemini-3-flash-preview">Gemini 3 Flash (Preview)</option>
+                        </optgroup>
+                        <optgroup label="✅ Gemini 2.5 &mdash; Ổn định, Khuyên dùng">
+                            <option value="gemini-2.5-flash" selected>Gemini 2.5 Flash ⭐ Khuyên dùng</option>
+                            <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash Lite (Nhanh &amp; Tiết kiệm)</option>
+                            <option value="gemini-2.5-pro">Gemini 2.5 Pro (Chất lượng tốt nhất)</option>
+                        </optgroup>
+                        <optgroup label="Gemini 2.0">
+                            <option value="gemini-2.0-flash">Gemini 2 Flash</option>
+                            <option value="gemini-2.0-flash-lite">Gemini 2 Flash Lite</option>
+                        </optgroup>
+                        <optgroup label="Tùy chỉnh">
+                            <option value="custom">Nhập tên model khác...</option>
+                        </optgroup>
                     </select>
                 </div>
 
@@ -494,7 +506,7 @@ HTML_TEMPLATE = """
                 <div class="input-wrapper">
                     <input type="text" id="url-input" placeholder="Ví dụ: https://cafef.vn/ba-dieu-anh-chi-gan-tram-ty-dong-om-15-co-phan-mot-doanh-nghiep-xay-dung-188260706234810936.chn">
                     <button class="btn" id="submit-btn" onclick="startScraping()">
-                        <span>⚡</span> Cào & Phân tích
+                        <span></span> Phân tích và tóm tắt
                     </button>
                 </div>
             </div>
@@ -504,7 +516,7 @@ HTML_TEMPLATE = """
         <div class="card loading-container" id="loader">
             <div class="spinner"></div>
             <h3 style="font-family: var(--font-display); font-size: 1.3rem; margin-bottom: 0.5rem;">Đang xử lý dữ liệu...</h3>
-            <p class="subtitle" style="font-size: 0.95rem;">Đang cào bài viết và liên hệ Gemini AI để biên soạn bản tóm tắt...</p>
+            <p class="subtitle" style="font-size: 0.95rem;">Đang phân tích và tóm tắt bài viết ...</p>
         </div>
 
         <!-- Results Grid -->

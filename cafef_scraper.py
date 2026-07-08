@@ -262,71 +262,98 @@ def scrape_cafef_article(url: str, api_key: Optional[str] = None, model_name: st
             
         # 7. Extract Images & Captions (Cover + all inline article images)
         try:
+            import re as _re
             images_list = []
             seen_urls = set()
 
-            def get_best_img_url(img_tag: Tag) -> str:
-                """Get highest quality URL from an img tag, converting thumb CDN to full-size."""
+            def get_best_img_url(img_tag):
+                """Get highest quality URL, converting thumb CDN prefix to full-size."""
                 raw = (
                     img_tag.get("data-original") or
                     img_tag.get("data-src") or
                     img_tag.get("data-lazy-src") or
-                    img_tag.get("src") or
-                    ""
+                    img_tag.get("src") or ""
                 )
                 if not raw or raw.startswith("data:"):
                     return ""
                 abs_url = resolve_url(url, raw.strip())
-                # Cafef CDN: convert thumb URLs like /thumb_w/640/... or /thumb_w/800/... to full size
-                import re
-                abs_url = re.sub(r"(cafefcdn\.com)/thumb_w/\d+/", r"\1/", abs_url)
+                # Strip Cafef CDN thumbnail prefix: /thumb_w/640/ -> /
+                abs_url = _re.sub(r"(cafefcdn\.com)/thumb_w/\d+/", r"\1/", abs_url)
                 return abs_url
 
-            def is_junk_url(img_url: str) -> bool:
-                """Filter out tracking pixels, icons, avatars, logos."""
-                junk_keywords = ["tracking", "pixel", "icon", "avatar", "logo", "ads", "banner", "loading", "spinner"]
-                return any(kw in img_url.lower() for kw in junk_keywords)
+            def is_junk_url(img_url):
+                """
+                Filter out UI/tracking/ad elements only.
+                NOTE: Do NOT filter on 'avatar' or 'logo' — Cafef uses these words
+                in real article photo filenames (e.g. avatar1783436531808.jpg).
+                """
+                lower = img_url.lower()
+                if lower.startswith("data:"):
+                    return True
+                junk_patterns = [
+                    r"/tracking[/?]", r"/pixel[/?]", r"\.gif(\?|$)",
+                    r"/zoom/\d+_\d+/",  # Sidebar/related article thumbnails
+                    r"/ads?[/_]", r"googlesyndication", r"doubleclick\.net",
+                    r"loading[\.-_]", r"spinner[\.-_]", r"/icons?/", r"favicon",
+                ]
+                return any(_re.search(p, lower) for p in junk_patterns)
 
-            def add_image(img_tag: Tag, caption_override: str = None):
+            def is_too_small(img_tag):
+                """Skip tiny sprites/icons based on explicit width/height."""
+                try:
+                    w = int(img_tag.get("width") or 0)
+                    h = int(img_tag.get("height") or 0)
+                    if 0 < w < 50 or 0 < h < 50:
+                        return True
+                except (ValueError, TypeError):
+                    pass
+                return False
+
+            def add_image(img_tag, caption_override=None, force=False):
                 img_url = get_best_img_url(img_tag)
-                if not img_url or img_url in seen_urls or is_junk_url(img_url):
+                if not img_url or img_url in seen_urls:
                     return
+                if not force:
+                    if is_junk_url(img_url) or is_too_small(img_tag):
+                        return
                 seen_urls.add(img_url)
                 caption = caption_override or find_image_caption(img_tag, container)
                 images_list.append({
                     "url": img_url,
                     "caption": caption if caption else None
                 })
+                logger.info(f"  + Image captured: {img_url[:90]}")
 
-            # Strategy 1: Cover image (data-role="cover") — usually the article thumbnail
+            # Strategy 1: Cover image — force=True to bypass junk filter
             cover_img = container.find("img", attrs={"data-role": "cover"})
             if cover_img:
                 cap = cover_img.get("alt") or cover_img.get("title") or None
                 if cap and len(cap.strip()) < 15:
                     cap = None
-                add_image(cover_img, cap)
-                logger.info("Found cover image (data-role='cover')")
+                add_image(cover_img, cap, force=True)
+                logger.info("Found cover image (data-role=\'cover\')")
+            else:
+                logger.info("No cover image (data-role=\'cover\') found in page")
 
-            # Strategy 2: All inline images inside VCSortableInPreviewMode blocks
+            # Strategy 2: All inline images in VCSortableInPreviewMode media blocks
             media_blocks = container.find_all(class_="VCSortableInPreviewMode")
             logger.info(f"Found {len(media_blocks)} VCSortableInPreviewMode blocks")
             for block in media_blocks:
                 for img in block.find_all("img"):
                     add_image(img)
 
-            # Strategy 3: Images directly inside content_area not already captured
+            # Strategy 3: Remaining images directly in content_area
             for img in content_area.find_all("img"):
                 add_image(img)
 
-            # Strategy 4: Scan the wider container for any remaining <img> tags
+            # Strategy 4: Broader scan across entire container
             for img in container.find_all("img"):
                 add_image(img)
 
             result["images"] = images_list
-            logger.info(f"Total images found: {len(images_list)}")
+            logger.info(f"Total images extracted: {len(images_list)}")
         except Exception as e:
             logger.warning(f"Error parsing images: {e}")
-            
         # 8. Generate Facebook summary if API Key is available
         if api_key and result["title"] and result["content"]:
             result["facebook_summary"] = generate_facebook_summary(

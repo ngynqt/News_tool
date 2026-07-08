@@ -91,7 +91,7 @@ def find_image_caption(img: Tag, content_area: Tag) -> str:
     return ""
 
 
-def generate_facebook_summary(title: str, sapo: str, content: str, url: str, api_key: str, model_name: str = "gemini-2.5-flash") -> Optional[str]:
+def generate_facebook_summary(title: str, sapo: str, content: str, url: str, api_key: str, model_name: str = "gemini-3.1-flash-lite") -> Optional[str]:
     """
     Uses Gemini API to generate an engaging Facebook post summary.
     """
@@ -133,7 +133,7 @@ Dữ liệu bài viết:
     return None
 
 
-def scrape_cafef_article(url: str, api_key: Optional[str] = None, model_name: str = "gemini-2.5-flash") -> Dict[str, Any]:
+def scrape_cafef_article(url: str, api_key: Optional[str] = None, model_name: str = "gemini-3.1-flash-lite") -> Dict[str, Any]:
     """
     Scrapes a Cafef article URL and extracts title, sapo, publish time,
     paragraphs content, and images with captions.
@@ -353,7 +353,7 @@ def main() -> None:
     # Retrieve Gemini API key and model name from argument, environment, or config file
     config = load_config()
     api_key = args.api_key or os.environ.get("GEMINI_API_KEY") or config.get("gemini_api_key")
-    model_name = args.model or config.get("gemini_model") or "gemini-2.5-flash"
+    model_name = args.model or config.get("gemini_model") or "gemini-3.1-flash-lite"
     
     if not api_key:
         logger.info("Gemini API key not found. Skipping Facebook post summary generation.")

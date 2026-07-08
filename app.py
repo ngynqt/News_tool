@@ -469,14 +469,14 @@ HTML_TEMPLATE = """
                 <div class="form-group" style="margin-bottom: 1rem;">
                     <label for="model-select">Mô hình Gemini (Model)</label>
                     <select id="model-select" onchange="handleModelChange()" style="width: 100%;">
-                        <optgroup label="⭐ Mới nhất &mdash; Gemini 3.x">
+                        <optgroup label=" Mới nhất &mdash; Gemini 3.x">
                             <option value="gemini-3.5-flash">Gemini 3.5 Flash (Mới nhất &amp; Nhanh)</option>
-                            <option value="gemini-3.1-flash-lite">Gemini 3.1 Flash Lite (Nhẹ, tiết kiệm quota)</option>
+                            <option value="gemini-3.1-flash-lite" selected>Gemini 3.1 Flash Lite (Nhẹ, tiết kiệm quota)</option>
                             <option value="gemini-3.1-pro-preview">Gemini 3.1 Pro (Chất lượng cao)</option>
                             <option value="gemini-3-flash-preview">Gemini 3 Flash (Preview)</option>
                         </optgroup>
-                        <optgroup label="✅ Gemini 2.5 &mdash; Ổn định, Khuyên dùng">
-                            <option value="gemini-2.5-flash" selected>Gemini 2.5 Flash ⭐ Khuyên dùng</option>
+                        <optgroup label=" Gemini 2.5 &mdash; Ổn định, Khuyên dùng">
+                            <option value="gemini-2.5-flash">Gemini 2.5 Flash  Khuyên dùng</option>
                             <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash Lite (Nhanh &amp; Tiết kiệm)</option>
                             <option value="gemini-2.5-pro">Gemini 2.5 Pro (Chất lượng tốt nhất)</option>
                         </optgroup>
@@ -799,7 +799,7 @@ def api_config():
     if request.method == "POST":
         data = request.json or {}
         key = data.get("gemini_api_key", "").strip()
-        model = data.get("gemini_model", "gemini-2.5-flash").strip()
+        model = data.get("gemini_model", "gemini-3.1-flash-lite").strip()
         config = load_config()
         config["gemini_api_key"] = key
         config["gemini_model"] = model
@@ -810,7 +810,7 @@ def api_config():
         config = load_config()
         return jsonify({
             "gemini_api_key": config.get("gemini_api_key", ""),
-            "gemini_model": config.get("gemini_model", "gemini-2.5-flash")
+            "gemini_model": config.get("gemini_model", "gemini-3.1-flash-lite")
         })
 
 
@@ -823,7 +823,7 @@ def api_scrape():
         
     config = load_config()
     api_key = os.environ.get("GEMINI_API_KEY") or config.get("gemini_api_key")
-    model_name = config.get("gemini_model", "gemini-2.5-flash")
+    model_name = config.get("gemini_model", "gemini-3.1-flash-lite")
     
     logger.info(f"API request to scrape: {url} using model: {model_name}")
     result = scrape_cafef_article(url, api_key=api_key, model_name=model_name)

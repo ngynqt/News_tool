@@ -260,36 +260,70 @@ def scrape_cafef_article(url: str, api_key: Optional[str] = None, model_name: st
         except Exception as e:
             logger.warning(f"Error parsing text content: {e}")
             
-        # 7. Extract Images & Captions
+        # 7. Extract Images & Captions (Cover + all inline article images)
         try:
             images_list = []
             seen_urls = set()
-            
-            for img in content_area.find_all("img"):
-                # Cafef uses data-original or data-src for original high-res image, fall back to src
-                img_url = img.get("data-original") or img.get("data-src") or img.get("src")
-                if not img_url:
-                    continue
-                
-                abs_url = resolve_url(url, img_url)
-                
-                # Filter out tracking pixels, icons, base64 data, or duplicate images
-                if not abs_url or abs_url in seen_urls:
-                    continue
-                if any(keyword in abs_url for keyword in ["tracking", "pixel", "icon", "avatar", "logo"]):
-                    continue
-                if abs_url.startswith("data:"):
-                    continue
-                    
-                seen_urls.add(abs_url)
-                caption = find_image_caption(img, content_area)
-                
+
+            def get_best_img_url(img_tag: Tag) -> str:
+                """Get highest quality URL from an img tag, converting thumb CDN to full-size."""
+                raw = (
+                    img_tag.get("data-original") or
+                    img_tag.get("data-src") or
+                    img_tag.get("data-lazy-src") or
+                    img_tag.get("src") or
+                    ""
+                )
+                if not raw or raw.startswith("data:"):
+                    return ""
+                abs_url = resolve_url(url, raw.strip())
+                # Cafef CDN: convert thumb URLs like /thumb_w/640/... or /thumb_w/800/... to full size
+                import re
+                abs_url = re.sub(r"(cafefcdn\.com)/thumb_w/\d+/", r"\1/", abs_url)
+                return abs_url
+
+            def is_junk_url(img_url: str) -> bool:
+                """Filter out tracking pixels, icons, avatars, logos."""
+                junk_keywords = ["tracking", "pixel", "icon", "avatar", "logo", "ads", "banner", "loading", "spinner"]
+                return any(kw in img_url.lower() for kw in junk_keywords)
+
+            def add_image(img_tag: Tag, caption_override: str = None):
+                img_url = get_best_img_url(img_tag)
+                if not img_url or img_url in seen_urls or is_junk_url(img_url):
+                    return
+                seen_urls.add(img_url)
+                caption = caption_override or find_image_caption(img_tag, container)
                 images_list.append({
-                    "url": abs_url,
+                    "url": img_url,
                     "caption": caption if caption else None
                 })
-                
+
+            # Strategy 1: Cover image (data-role="cover") — usually the article thumbnail
+            cover_img = container.find("img", attrs={"data-role": "cover"})
+            if cover_img:
+                cap = cover_img.get("alt") or cover_img.get("title") or None
+                if cap and len(cap.strip()) < 15:
+                    cap = None
+                add_image(cover_img, cap)
+                logger.info("Found cover image (data-role='cover')")
+
+            # Strategy 2: All inline images inside VCSortableInPreviewMode blocks
+            media_blocks = container.find_all(class_="VCSortableInPreviewMode")
+            logger.info(f"Found {len(media_blocks)} VCSortableInPreviewMode blocks")
+            for block in media_blocks:
+                for img in block.find_all("img"):
+                    add_image(img)
+
+            # Strategy 3: Images directly inside content_area not already captured
+            for img in content_area.find_all("img"):
+                add_image(img)
+
+            # Strategy 4: Scan the wider container for any remaining <img> tags
+            for img in container.find_all("img"):
+                add_image(img)
+
             result["images"] = images_list
+            logger.info(f"Total images found: {len(images_list)}")
         except Exception as e:
             logger.warning(f"Error parsing images: {e}")
             

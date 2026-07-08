@@ -528,6 +528,9 @@ HTML_TEMPLATE = """
                     <span>📅 <b id="art-date">01/01/2026</b></span>
                     <span>🔗 <a href="#" id="art-link" target="_blank" style="color: var(--accent-color); text-decoration: none;">Xem bài viết gốc</a></span>
                 </div>
+                <div id="art-cover-wrap" style="display:none; margin: 1rem 0; border-radius: 12px; overflow: hidden;">
+                    <img id="art-cover-img" src="" alt="Ảnh bìa bài viết" style="width:100%; max-height:380px; object-fit:cover; border-radius:12px; display:block;">
+                </div>
                 <div class="sapo-box" id="art-sapo">
                     Đây là phần tóm tắt ngắn (sapo) của bài viết.
                 </div>
@@ -742,25 +745,68 @@ HTML_TEMPLATE = """
                     
                     if (data.images && data.images.length > 0) {
                         imgSection.style.display = 'block';
-                        data.images.forEach(img => {
+
+                        // Show cover image in left pane (first image)
+                        const coverWrap = document.getElementById('art-cover-wrap');
+                        const coverImg = document.getElementById('art-cover-img');
+                        coverWrap.style.display = 'block';
+                        coverImg.src = data.images[0].url;
+                        coverImg.alt = data.images[0].caption || 'Ảnh bìa';
+
+                        data.images.forEach((img, index) => {
                             const card = document.createElement('div');
                             card.className = 'image-card';
-                            
+                            card.style.position = 'relative';
+
                             const imgEl = document.createElement('img');
                             imgEl.src = img.url;
                             imgEl.alt = img.caption || 'Ảnh bài viết';
+                            imgEl.style.cursor = 'pointer';
+                            imgEl.onclick = () => window.open(img.url, '_blank');
                             card.appendChild(imgEl);
-                            
+
+                            if (index === 0) {
+                                const badge = document.createElement('div');
+                                badge.textContent = '📌 Ảnh bìa';
+                                badge.style.cssText = 'position:absolute;top:8px;left:8px;background:var(--accent-color);color:white;font-size:0.7rem;padding:2px 8px;border-radius:20px;font-weight:600;';
+                                card.appendChild(badge);
+                            }
+
                             if (img.caption) {
                                 const cap = document.createElement('div');
                                 cap.className = 'image-caption';
                                 cap.textContent = img.caption;
                                 card.appendChild(cap);
                             }
+
+                            // Action buttons row
+                            const btnRow = document.createElement('div');
+                            btnRow.style.cssText = 'display:flex;gap:0.4rem;padding:0.5rem;';
+
+                            const copyBtn = document.createElement('button');
+                            copyBtn.textContent = '🔗 Sao chép URL';
+                            copyBtn.style.cssText = 'flex:1;font-size:0.75rem;padding:0.35rem 0.5rem;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1);color:var(--text-main);border-radius:6px;cursor:pointer;';
+                            copyBtn.onclick = () => {
+                                navigator.clipboard.writeText(img.url);
+                                copyBtn.textContent = '✅ Đã chép!';
+                                setTimeout(() => { copyBtn.textContent = '🔗 Sao chép URL'; }, 2000);
+                            };
+
+                            const dlBtn = document.createElement('a');
+                            dlBtn.href = img.url;
+                            dlBtn.target = '_blank';
+                            dlBtn.textContent = '⬇ Tải ảnh';
+                            dlBtn.style.cssText = 'flex:1;font-size:0.75rem;padding:0.35rem 0.5rem;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1);color:var(--text-main);border-radius:6px;cursor:pointer;text-align:center;text-decoration:none;';
+
+                            btnRow.appendChild(copyBtn);
+                            btnRow.appendChild(dlBtn);
+                            card.appendChild(btnRow);
+
                             imgGrid.appendChild(card);
                         });
                     } else {
                         imgSection.style.display = 'none';
+                        document.getElementById('art-cover-wrap').style.display = 'none';
                     }
 
                     // Transition to show results
